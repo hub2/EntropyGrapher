@@ -8,9 +8,6 @@ from typing import Sequence, AnyStr
 import sys
 
 
-# import scipy.stats
-
-
 def read_in_chunks(file_object, chunk_size=1024):
     """Lazy function (generator) to read a file piece by piece.
     Default chunk size: 1k."""
