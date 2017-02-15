@@ -2,8 +2,6 @@
 import math
 from collections import Counter
 import matplotlib.pyplot as plt
-import matplotlib.colors as clrs
-import matplotlib.ticker as ticker
 from typing import Sequence, AnyStr
 import sys
 
@@ -23,8 +21,8 @@ class EntropyGrapher:
     entropies = []
 
     def __init__(self, data: Sequence):
-        self.entropies = EntropyGrapher._get_entropy(data)
-        self.entropies = EntropyGrapher._normalize_entropies(self.entropies)
+        self.entropies.append(EntropyGrapher._get_entropy(data))
+        #self.entropies = EntropyGrapher._normalize_entropies(self.entropies)
 
     @classmethod
     def from_file(cls, filename: AnyStr, _chunk_size=chunk_size):
@@ -75,7 +73,8 @@ class EntropyGrapher:
         min_ent = min(_entropies)
         # print("min_ent: ", min_ent)
         # print("max_ent: ", max_ent)
-        normalized_entropies = [((x - min_ent) / (max_ent - min_ent)) for x in _entropies]
+        diff = max_ent - min_ent
+        normalized_entropies = [((x - min_ent) / (diff)) for x in _entropies]
         return normalized_entropies
 
 
