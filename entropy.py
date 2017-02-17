@@ -1,10 +1,13 @@
 #!/usr/bin/env python3
 import math
 from collections import Counter
+
+import array
 import matplotlib.pyplot as plt
 from typing import Sequence, AnyStr
 import sys
-
+from PIL import Image
+from itertools import chain
 
 def read_in_chunks(file_object, chunk_size=1024):
     """Lazy function (generator) to read a file piece by piece.
@@ -17,8 +20,9 @@ def read_in_chunks(file_object, chunk_size=1024):
 
 
 class EntropyGrapher:
-    chunk_size = 64
+    chunk_size = 256
     entropies = []
+    file_data = b""
 
     def __init__(self, data: Sequence):
         self.entropies.append(EntropyGrapher._get_entropy(data))
@@ -30,6 +34,8 @@ class EntropyGrapher:
         obj.chunk_size = _chunk_size
         obj.entropies = EntropyGrapher._get_entropies_from_file(filename)
         obj.entropies = EntropyGrapher._normalize_entropies(obj.entropies)
+        with open(filename, "rb") as f:
+            obj.file_data = f.read()
         return obj
 
     def plot_entropies(self):
@@ -49,6 +55,20 @@ class EntropyGrapher:
                 c = (0, 0, 1)
             i.set_color(c)
         plt.show()
+
+    def show_file_image(self):
+        self.input_data = self.file_data
+        sqroot = math.floor(math.sqrt(len(self.input_data)))
+        # data = array.array('B', chain.from_iterable([(int(x*255), 200, 200) for x in self.input_data])).tostring()
+        data = array.array('B', chain.from_iterable([(x, 200, 200) for x in self.input_data])).tostring()
+
+        print(sqroot**2)
+        print(len(data))
+        x = self.chunk_size
+        y = len(self.input_data)//self.chunk_size
+        img = Image.frombytes("HSV", (self.chunk_size, y), data)
+        img = img.resize((x*3, y*3))
+        img.show()
 
     @staticmethod
     def _get_entropies_from_file(filename, chk_size=chunk_size):
@@ -73,11 +93,15 @@ class EntropyGrapher:
         min_ent = min(_entropies)
         # print("min_ent: ", min_ent)
         # print("max_ent: ", max_ent)
+        normalized_entropies =_entropies
         diff = max_ent - min_ent
-        normalized_entropies = [((x - min_ent) / (diff)) for x in _entropies]
+        if not diff == 0:
+            normalized_entropies = [((x - min_ent) / (diff)) for x in _entropies]
         return normalized_entropies
 
 
 if __name__ == "__main__":
+    if len(sys.argv) < 2:
+        sys.exit(0)
     eg = EntropyGrapher.from_file(sys.argv[1])
-    eg.plot_entropies()
+    eg.show_file_image()
