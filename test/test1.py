@@ -27,12 +27,6 @@ class TestEntropyCalculations2(TestCase):
         self.assertEqual(my_entropy, 0)
 
 
-class TestClass(TestCase):
-    def test(self):
-        eg = EntropyGrapher("a")
-        self.assertNotEqual(eg.entropies[0], 1)
-
-
 
 
 

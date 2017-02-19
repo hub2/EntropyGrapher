@@ -1,13 +1,16 @@
 #!/usr/bin/env python3
-import math
-from collections import Counter
-
 import array
-import matplotlib.pyplot as plt
-from typing import Sequence, AnyStr
+import math
+import os.path
 import sys
-from PIL import Image
+import argparse
+from collections import Counter
 from itertools import chain
+from typing import AnyStr
+
+import matplotlib.pyplot as plt
+from PIL import Image
+
 
 def read_in_chunks(file_object, chunk_size=1024):
     """Lazy function (generator) to read a file piece by piece.
@@ -20,23 +23,16 @@ def read_in_chunks(file_object, chunk_size=1024):
 
 
 class EntropyGrapher:
-    chunk_size = 256
     entropies = []
     file_data = b""
 
-    def __init__(self, data: Sequence):
-        self.entropies.append(EntropyGrapher._get_entropy(data))
-        #self.entropies = EntropyGrapher._normalize_entropies(self.entropies)
 
-    @classmethod
-    def from_file(cls, filename: AnyStr, _chunk_size=chunk_size):
-        obj = cls.__new__(cls)
-        obj.chunk_size = _chunk_size
-        obj.entropies = EntropyGrapher._get_entropies_from_file(filename)
-        obj.entropies = EntropyGrapher._normalize_entropies(obj.entropies)
+    def __init__(self, filename: AnyStr, _chunk_size=256):
+        self.chunk_size = _chunk_size
+        self.entropies = EntropyGrapher._get_entropies_from_file(filename, _chunk_size)
+        self.entropies = EntropyGrapher._normalize_entropies(self.entropies)
         with open(filename, "rb") as f:
-            obj.file_data = f.read()
-        return obj
+            self.file_data = f.read()
 
     def plot_entropies(self):
         axes = plt.gca()  # get handle on axes
@@ -54,24 +50,38 @@ class EntropyGrapher:
             elif y <= 0.5:
                 c = (0, 0, 1)
             i.set_color(c)
+
+    def plot_entropies_show(self):
+        self.plot_entropies()
         plt.show()
 
-    def show_file_image(self):
+    def save_entropies_to_file(self, filename):
+        self.plot_entropies()
+        plt.savefig(filename)
+
+    def save_img_from_file_data(self, filename):
         self.input_data = self.file_data
-        sqroot = math.floor(math.sqrt(len(self.input_data)))
-        # data = array.array('B', chain.from_iterable([(int(x*255), 200, 200) for x in self.input_data])).tostring()
+
+        x = self.chunk_size
+        y = len(self.input_data) // x
+
+        # Preparing data to import as HSV
+        # Saturation and value are static, Hue = x
+        # https://upload.wikimedia.org/wikipedia/commons/0/0d/HSV_color_solid_cylinder_alpha_lowgamma.png
         data = array.array('B', chain.from_iterable([(x, 200, 200) for x in self.input_data])).tostring()
 
-        print(sqroot**2)
+        print(3 * x * y)
         print(len(data))
-        x = self.chunk_size
-        y = len(self.input_data)//self.chunk_size
-        img = Image.frombytes("HSV", (self.chunk_size, y), data)
-        img = img.resize((x*3, y*3))
-        img.show()
+        img = Image.frombytes("HSV", (x, y), data)
+        img = img.convert("RGB")
+        # img = img.resize((4*x, 4*y))
+
+        # Save with format .ext from filename if possible
+        with open(filename, "wb") as f:
+            img.save(f, format=os.path.splitext(filename)[1][1:])
 
     @staticmethod
-    def _get_entropies_from_file(filename, chk_size=chunk_size):
+    def _get_entropies_from_file(filename, chk_size=256):
         _entropies = []
         with open(filename, "rb") as f:
             for piece in read_in_chunks(f, chk_size):
@@ -82,26 +92,51 @@ class EntropyGrapher:
     @staticmethod
     def _get_entropy(data):
         counter_obj = Counter(data)
-        probabilities_dict = {k: v / len(data) for k, v in dict(counter_obj).items()}
-        probabilities = list(probabilities_dict.values())
-        entropy = -sum([x * math.log(x) for x in probabilities])
+        len_data = len(data)
+        probabilities = [v / len_data for k, v in counter_obj.items()]
+        entropy = -sum(x * math.log(x) for x in probabilities)
         return entropy
 
     @staticmethod
     def _normalize_entropies(_entropies):
         max_ent = max(_entropies)
         min_ent = min(_entropies)
-        # print("min_ent: ", min_ent)
-        # print("max_ent: ", max_ent)
-        normalized_entropies =_entropies
+        normalized_entropies = _entropies
         diff = max_ent - min_ent
-        if not diff == 0:
-            normalized_entropies = [((x - min_ent) / (diff)) for x in _entropies]
+        if diff:
+            normalized_entropies = [((x - min_ent) / diff) for x in _entropies]
         return normalized_entropies
 
 
+
 if __name__ == "__main__":
-    if len(sys.argv) < 2:
-        sys.exit(0)
-    eg = EntropyGrapher.from_file(sys.argv[1])
-    eg.show_file_image()
+    parser = argparse.ArgumentParser(description="Simple tool for file visualization")
+    parser.add_argument('filename', metavar='filename', type=str, help="name of the file to analyze")
+    parser.add_argument("-c", "--chk_size", type=int)
+    parser.add_argument("-o", "--output")
+
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument("-e", "--entropy", action='store_true')
+    group.add_argument("-i", "--image", action='store_true')
+
+    args = parser.parse_args()
+    if args.chk_size:
+        eg = EntropyGrapher(args.filename, args.chk_size)
+    else:
+        eg = EntropyGrapher(args.filename)
+
+    if args.image:
+        if args.output:
+            eg.save_img_from_file_data(args.output)
+        else:
+            print("Provide output file")
+            sys.exit(0)
+    elif args.entropy:
+        if args.output:
+            eg.save_entropies_to_file(args.output)
+        else:
+            eg.plot_entropies_show()
+
+    print(args)
+
+
