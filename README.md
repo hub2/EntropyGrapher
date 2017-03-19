@@ -7,4 +7,5 @@ A simple project to visualize entropy inside a file.
 
 
 Example image of movfuscated binary:
+
 ![](http://i.imgur.com/UNYkeDh.jpg)
