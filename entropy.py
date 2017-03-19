@@ -70,8 +70,8 @@ class EntropyGrapher:
         # https://upload.wikimedia.org/wikipedia/commons/0/0d/HSV_color_solid_cylinder_alpha_lowgamma.png
         data = array.array('B', chain.from_iterable([(x, 200, 200) for x in self.input_data])).tostring()
 
-        print(3 * x * y)
-        print(len(data))
+        #print(3 * x * y)
+        #print(len(data))
         img = Image.frombytes("HSV", (x, y), data)
         img = img.convert("RGB")
         # img = img.resize((4*x, 4*y))
